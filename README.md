@@ -40,13 +40,6 @@ restic repository and still be considered different backups for the
 purpose of reporting metrics. The paths of the backup are not considered
 to be a grouping critera for backup sets.
 
-Each metric has these common labels:
-
-* `instance` - the name passed in the `--instance` flag at runtime. This
-   is used to indicate the name of the backup set server being scraped (see
-   Running).
-* `job` - the name of the backup job which is hard coded to `backupReporter`
-
 The following gauge metrics are exposed:
 
 * `backup_job_last_success_unixtime` - the last time that the entire
@@ -176,15 +169,11 @@ before starting the process.
 The following command line flags are supported:
 
 * `--help` - shows help
-* `--instance` - the name of the instance being scraped (for example the
-  hostname of the backup server hosting a restic-rest-server instance)
 * `--bind` (default: `:9121`) - bind address for the HTTP server
 * `--config` (default: `config.json`) - the path to the configuration file
-* `--timezone` (default: `America/Los_Angeles`) - the time zone name to
-  use for scheduling
 * `cron` (default: `0 0 * * *`) - the cron expression used for scheduling
   when repository scrapes should occur. By default this is midnight in the
-  indicated timezone every day.
+  local timezone every day.
 
 ### Signals
 

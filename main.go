@@ -29,22 +29,18 @@ func main() {
 	// Process command-line args
 	bind := flag.String("bind", ":9121", "Bind address for http server")
 	configFile := flag.String("config", "config.json", "Path to configuration file")
-	timeZone := flag.String("timezone", "America/Los_Angeles", "Time zone to use for scheduling")
-	instanceName := flag.String("instance", "", "Instance name to use in reporting metrics")
-	cronExpression := flag.String("cron", "0 0 * * *", "Cron expression for how often to gater repo metrics")
+	cronExpression := flag.String("cron", "0 0 * * *", "Cron expression for how often to gather repo metrics")
 	flag.Parse()
-
-	if *instanceName == "" {
-		logger.Fatal("--instance is a required argument")
-	}
 
 	// Setup application context
 	ctx, cancelMain := context.WithCancel(context.Background())
 	defer cancelMain()
 
+	// Handle various signals
 	sigs := make(chan os.Signal, 10)
 	signal.Notify(sigs, syscall.SIGHUP, syscall.SIGUSR1, syscall.SIGINT)
 
+	// Setup secret client if possible
 	var sc secrets.ClientManager
 	if os.Getenv("VAULT_ADDR") == "" {
 		logger.Warn("VAULT_ADDR not found in environment, Vault is disabled")
@@ -58,19 +54,17 @@ func main() {
 		}
 	}
 
-	collector := NewResticCollector(*instanceName, logger)
+	// Setup the collector and load config
+	collector := NewResticCollector(logger)
 	prometheus.MustRegister(collector)
 
 	if err := collector.ReloadConfig(ctx, *configFile, sc); err != nil {
 		logger.Fatal("Error loading configuration", zap.Error(err))
 	}
 
-	tz, err := time.LoadLocation(*timeZone)
-	if err != nil {
-		logger.Fatal("Error loading timezone", zap.Error(err))
-	}
-
-	sched, err := gocron.NewScheduler(gocron.WithLocation(tz))
+	// Uses time.Local as time zone, which considers the TZ environment
+	// variable override. Export that if needed.
+	sched, err := gocron.NewScheduler()
 	if err != nil {
 		logger.Fatal("Error configuring scheduler", zap.Error(err))
 	}

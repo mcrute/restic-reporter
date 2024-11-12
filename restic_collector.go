@@ -24,19 +24,17 @@ type repoStats struct {
 }
 
 type ResticCollector struct {
-	InstanceName string
-	config       atomic.Pointer[ConfigFile]
-	metrics      atomic.Pointer[allRepoMetrics]
-	wait         *sync.WaitGroup // held by gatherOne to prevent leaving stale locks
-	logger       *zap.Logger
-	sync.Mutex   // prevents concurrent collections
+	config     atomic.Pointer[ConfigFile]
+	metrics    atomic.Pointer[allRepoMetrics]
+	wait       *sync.WaitGroup // held by gatherOne to prevent leaving stale locks
+	logger     *zap.Logger
+	sync.Mutex // prevents concurrent collections
 }
 
-func NewResticCollector(instanceName string, logger *zap.Logger) *ResticCollector {
+func NewResticCollector(logger *zap.Logger) *ResticCollector {
 	return &ResticCollector{
-		InstanceName: instanceName,
-		wait:         &sync.WaitGroup{},
-		logger:       logger,
+		wait:   &sync.WaitGroup{},
+		logger: logger,
 	}
 }
 
@@ -135,32 +133,36 @@ func (c *ResticCollector) Collect(ch chan<- prometheus.Metric) {
 
 	ch <- prometheus.MustNewConstMetric(
 		lastSuccessTime, prometheus.GaugeValue, float64(metrics.Time.UnixNano())/1e9,
-		c.InstanceName, jobName,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		jobErrorCount, prometheus.GaugeValue, float64(metrics.Errors),
-		c.InstanceName, jobName,
 	)
 
 	for _, stats := range metrics.Stats {
 		ch <- prometheus.MustNewConstMetric(
 			readErrorCount, prometheus.GaugeValue, float64(stats.ReadErrors),
-			c.InstanceName, stats.Name, jobName,
+			stats.Name,
 		)
 
 		for _, set := range stats.Stats {
+			// See not on IsLegacy method
+			var legacy = "false"
+			if set.IsLegacy() {
+				legacy = "true"
+			}
+
 			ch <- prometheus.MustNewConstMetric(
 				snapshotCount, prometheus.GaugeValue, float64(set.Count),
-				c.InstanceName, stats.Name, set.Host, set.Username, jobName,
+				stats.Name, set.Host, set.Username, legacy,
 			)
 			ch <- prometheus.MustNewConstMetric(
 				newestTimestamp, prometheus.GaugeValue, float64(set.Time.Unix()),
-				c.InstanceName, stats.Name, set.Host, set.Username, jobName,
+				stats.Name, set.Host, set.Username, legacy,
 			)
 			ch <- prometheus.MustNewConstMetric(
 				backupSetDayAge, prometheus.GaugeValue, float64(set.DayAge(now)),
-				c.InstanceName, stats.Name, set.Host, set.Username, jobName,
+				stats.Name, set.Host, set.Username,
 			)
 		}
 	}
