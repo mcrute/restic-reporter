@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -52,6 +53,8 @@ func main() {
 		if err := sc.Authenticate(ctx); err != nil {
 			logger.Fatal("Error authenticating vault", zap.Error(err))
 		}
+
+		go sc.Run(ctx, &sync.WaitGroup{})
 	}
 
 	// Setup the collector and load config
