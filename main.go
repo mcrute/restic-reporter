@@ -111,6 +111,13 @@ func main() {
 		fmt.Fprintf(w, `<h1>Restic Exporter</h1><pre><a href="/metrics">/metrics</a></pre>`)
 	})
 
+	httpMux.HandleFunc("/reload", func(w http.ResponseWriter, r *http.Request) {
+		go collector.GatherMetrics(ctx)
+
+		w.Header().Set("Content-Type", "text/plain")
+		fmt.Fprintf(w, `Started collection asynchronously`)
+	})
+
 	go func() {
 		logger.Info("HTTP server listening", zap.String("port", *bind))
 		if err := httpServer.ListenAndServe(); err != nil {
