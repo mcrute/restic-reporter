@@ -19,6 +19,8 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+var version string
+
 func main() {
 	var err error
 
@@ -31,7 +33,15 @@ func main() {
 	bind := flag.String("bind", ":9121", "Bind address for http server")
 	configFile := flag.String("config", "config.json", "Path to configuration file")
 	cronExpression := flag.String("cron", "0 0 * * *", "Cron expression for how often to gather repo metrics")
+	noVaultAutodiscover := flag.Bool("no-discover-vault", false, "Disable autodiscovery of Vault host")
+	disableVault := flag.Bool("no-vault", false, "Disable usage of Vault")
+	showVersion := flag.Bool("version", false, "Show application version and exit")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("Version: %s\n", version)
+		return
+	}
 
 	// Setup application context
 	ctx, cancelMain := context.WithCancel(context.Background())
@@ -43,11 +53,17 @@ func main() {
 
 	// Setup secret client if possible
 	var sc secrets.ClientManager
-	if os.Getenv("VAULT_ADDR") == "" {
-		logger.Warn("VAULT_ADDR not found in environment, Vault is disabled")
+	if *disableVault {
+		logger.Warn("Vault is disabled")
 	} else {
-		if sc, err = secrets.NewVaultClient(nil); err != nil {
-			logger.Fatal("Error configuring vault", zap.Error(err))
+		if *noVaultAutodiscover {
+			if sc, err = secrets.NewVaultClient(nil); err != nil {
+				logger.Fatal("Error configuring vault", zap.Error(err))
+			}
+		} else {
+			if sc, err = secrets.NewAutodiscoverVaultClient(ctx); err != nil {
+				logger.Fatal("Error configuring vault", zap.Error(err))
+			}
 		}
 
 		if err := sc.Authenticate(ctx); err != nil {

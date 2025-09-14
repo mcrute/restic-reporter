@@ -157,8 +157,7 @@ before starting the process.
 
 * `VAULT_ADDR` the HTTP/S address the Vault server. The presence of this
   variable in the environment indicates to the application to start Vault
-  support. If this is missing Vault will be skipped and the application
-  will start normally.
+  support.
 * `VAULT_TOKEN` (optional) a Vault token to use for authentication
 * `VAULT_ROLE_ID` and `VAULT_SECRET_ID` (optional) used to authenticate
   to Vault using the AppRole backend. Either these or `VAULT_TOKEN` must
@@ -169,11 +168,15 @@ before starting the process.
 The following command line flags are supported:
 
 * `--help` - shows help
+* `--version` - shows version and exits
 * `--bind` (default: `:9121`) - bind address for the HTTP server
 * `--config` (default: `config.json`) - the path to the configuration file
 * `cron` (default: `0 0 * * *`) - the cron expression used for scheduling
   when repository scrapes should occur. By default this is midnight in the
   local timezone every day.
+* `--no-vault` - disable Vault integration
+* `--no-discover-vault` - disable Vault autodiscovery using DNS SRV
+  records
 
 ### Signals
 
